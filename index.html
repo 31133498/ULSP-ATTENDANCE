@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ULSP Attendance</title>
+</head>
+<body>
+  <h2>ULSP Attendance Platform</h2>
+  <button id="loginBtn">Sign in with Google</button>
+
+  <div id="classSection" style="display:none;">
+    <p>Welcome! Select your class:</p>
+    <select id="classSelect">
+      <option value="ULSP Year 1">ULSP Year 1</option>
+      <option value="ULSP Year 2">ULSP Year 2</option>
+      <option value="ULSP Year 3">ULSP Year 3</option>
+      <option value="ULSP Year 4">ULSP Year 4</option>
+    </select>
+    <button id="takeAttendanceBtn">Take Attendance</button>
+  </div>
+
+  <script type="module">
+    // Firebase CDN imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import {
+      getAuth,
+      signInWithPopup,
+      GoogleAuthProvider
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCJi5DJSVAZtpJ6SZD1mfPl3Cls5XxOZ94",
+      authDomain: "ulsp-attendance.firebaseapp.com",
+      projectId: "ulsp-attendance",
+      storageBucket: "ulsp-attendance.appspot.com",  // fixed: this was incorrect before
+      messagingSenderId: "927474627007",
+      appId: "1:927474627007:web:a89594690d37dc0d36b10a"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // DOM Elements
+    const loginBtn = document.getElementById("loginBtn");
+    const classSection = document.getElementById("classSection");
+    const takeAttendanceBtn = document.getElementById("takeAttendanceBtn");
+    const classSelect = document.getElementById("classSelect");
+
+    // Login with Google
+    loginBtn.addEventListener("click", async () => {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        alert(`Signed in as ${user.displayName}`);
+        classSection.style.display = "block";
+        loginBtn.style.display = "none";
+      } catch (error) {
+        console.error("Sign-in error:", error);
+        alert("Login failed: " + error.message);
+      }
+    });
+
+    // Dummy attendance
+    takeAttendanceBtn.addEventListener("click", () => {
+      const selectedClass = classSelect.value;
+      alert(`Attendance taken for ${selectedClass}`);
+    });
+  </script>
+</body>
+</html>
