@@ -1,13 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>ULSP Attendance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    #loginBtn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background-color: white;
+      border: 1px solid #ddd;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #loginBtn img {
+      height: 20px;
+    }
+
+    #userProfile {
+      display: none;
+      float: right;
+      position: relative;
+    }
+
+    #userName {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #dropdown {
+      display: none;
+      position: absolute;
+      top: 25px;
+      right: 0;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      padding: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    #dropdown button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 5px;
+    }
+
+    #classSection {
+      margin-top: 30px;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h2>ULSP Attendance Platform</h2>
-  <button id="loginBtn">Sign in with Google</button>
 
-  <div id="classSection" style="display:none;">
+  <h2>ULSP Attendance Platform</h2>
+
+  <!-- User Profile -->
+  <div id="userProfile">
+    <span id="userName"></span>
+    <div id="dropdown">
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <button id="loginBtn">
+    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+    Sign in with Google
+  </button>
+
+  <!-- Class Selection Section -->
+  <div id="classSection">
     <p>Welcome! Select your class:</p>
     <select id="classSelect">
       <option value="ULSP Year 1">ULSP Year 1</option>
@@ -18,54 +90,73 @@
     <button id="takeAttendanceBtn">Take Attendance</button>
   </div>
 
+  <!-- Firebase & Logic -->
   <script type="module">
-    // Firebase CDN imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import {
       getAuth,
       signInWithPopup,
-      GoogleAuthProvider
+      GoogleAuthProvider,
+      signOut,
+      onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCJi5DJSVAZtpJ6SZD1mfPl3Cls5XxOZ94",
       authDomain: "ulsp-attendance.firebaseapp.com",
       projectId: "ulsp-attendance",
-      storageBucket: "ulsp-attendance.appspot.com",  // fixed: this was incorrect before
+      storageBucket: "ulsp-attendance.appspot.com",
       messagingSenderId: "927474627007",
       appId: "1:927474627007:web:a89594690d37dc0d36b10a"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // DOM Elements
     const loginBtn = document.getElementById("loginBtn");
     const classSection = document.getElementById("classSection");
     const takeAttendanceBtn = document.getElementById("takeAttendanceBtn");
     const classSelect = document.getElementById("classSelect");
+    const userProfile = document.getElementById("userProfile");
+    const userName = document.getElementById("userName");
+    const dropdown = document.getElementById("dropdown");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-    // Login with Google
     loginBtn.addEventListener("click", async () => {
       try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        alert(`Signed in as ${user.displayName}`);
-        classSection.style.display = "block";
-        loginBtn.style.display = "none";
+        await signInWithPopup(auth, provider);
       } catch (error) {
-        console.error("Sign-in error:", error);
+        console.error("Login failed:", error);
         alert("Login failed: " + error.message);
       }
     });
 
-    // Dummy attendance
+    userName.addEventListener("click", () => {
+      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.reload();
+    });
+
     takeAttendanceBtn.addEventListener("click", () => {
       const selectedClass = classSelect.value;
       alert(`Attendance taken for ${selectedClass}`);
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginBtn.style.display = "none";
+        userProfile.style.display = "block";
+        userName.textContent = user.displayName;
+        classSection.style.display = "block";
+      } else {
+        loginBtn.style.display = "block";
+        userProfile.style.display = "none";
+        classSection.style.display = "none";
+      }
     });
   </script>
 </body>
