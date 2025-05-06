@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Admin Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold">ULSP Attendance Admin</h1>
+            <div class="flex items-center gap-4">
+                <span id="adminEmail" class="text-gray-600"></span>
+                <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <div class="flex gap-4">
+                <select id="classFilter" class="p-2 border rounded w-1/3">
+                    <option value="">All Classes</option>
+                    <option>ULSP Year 1</option>
+                    <option>ULSP Year 2</option>
+                    <option>ULSP Year 3</option>
+                    <option>ULSP Year 4</option>
+                </select>
+                <input type="date" id="dateFilter" class="p-2 border rounded w-1/3">
+                <button id="resetFilters" class="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">
+                    Reset Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Name</th>
+                        <th class="px-6 py-3 text-left">Email</th>
+                        <th class="px-6 py-3 text-left">Class</th>
+                        <th class="px-6 py-3 text-left">Date/Time</th>
+                        <th class="px-6 py-3 text-left">Location</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="attendanceData">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- All-in-One Firebase Implementation -->
+    <script type="module">
+        // Import Firebase services directly
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth,
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signOut,
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            query, 
+            where, 
+            getDocs,
+            Timestamp 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJi5DJSVAZtpJ6SZD1mfPl3Cls5XxOZ94",
+            authDomain: "ulsp-attendance.firebaseapp.com",
+            projectId: "ulsp-attendance",
+            storageBucket: "ulsp-attendance.appspot.com",
+            messagingSenderId: "927474627007",
+            appId: "1:927474627007:web:a89594690d37dc0d36b10a"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // DOM Elements
+        const logoutBtn = document.getElementById("logoutBtn");
+        const attendanceData = document.getElementById("attendanceData");
+        const classFilter = document.getElementById("classFilter");
+        const dateFilter = document.getElementById("dateFilter");
+        const resetFilters = document.getElementById("resetFilters");
+        const adminEmail = document.getElementById("adminEmail");
+
+        // Check Admin Status
+        async function checkAdminAccess(user) {
+            const adminRef = collection(db, "admins");
+            const snapshot = await getDocs(adminRef);
+            const isAdmin = snapshot.docs.some(doc => doc.id === user.uid);
+            
+            if(!isAdmin) {
+                alert("Access denied: You are not an admin");
+                window.location.href = "index.html";
+            }
+        }
+
+        // Load Attendance Data
+        async function loadAttendance(filters = {}) {
+            let q = query(collection(db, "attendance"));
+
+            if(filters.class) {
+                q = query(q, where("className", "==", filters.class));
+            }
+
+            if(filters.date) {
+                const startDate = new Date(filters.date);
+                const endDate = new Date(filters.date);
+                endDate.setDate(endDate.getDate() + 1);
+                
+                q = query(q, 
+                    where("timestamp", ">=", Timestamp.fromDate(startDate)),
+                    where("timestamp", "<", Timestamp.fromDate(endDate))
+                );
+            }
+
+            const snapshot = await getDocs(q);
+            attendanceData.innerHTML = "";
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const row = `
+                    <tr>
+                        <td class="px-6 py-4">${data.userName}</td>
+                        <td class="px-6 py-4">${data.userEmail}</td>
+                        <td class="px-6 py-4">${data.className}</td>
+                        <td class="px-6 py-4">${data.timestamp.toDate().toLocaleString()}</td>
+                        <td class="px-6 py-4">
+                            <a href="https://www.google.com/maps?q=${data.location.lat},${data.location.lng}" 
+                               target="_blank" 
+                               class="text-blue-600 hover:underline">
+                                View Map
+                            </a>
+                        </td>
+                    </tr>
+                `;
+                attendanceData.innerHTML += row;
+            });
+        }
+
+        // Auth State Handler
+        onAuthStateChanged(auth, async (user) => {
+            if(user) {
+                if(user.email === "sannishazily@gmail.com") {
+                    adminEmail.textContent = user.email;
+                    await checkAdminAccess(user);
+                    await loadAttendance();
+                } else {
+                    alert("Access denied: Admin email mismatch");
+                    signOut(auth);
+                    window.location.href = "index.html";
+                }
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // Filter Handlers
+        classFilter.addEventListener("change", () => updateFilters());
+        dateFilter.addEventListener("change", () => updateFilters());
+        resetFilters.addEventListener("click", () => {
+            classFilter.value = "";
+            dateFilter.value = "";
+            loadAttendance();
+        });
+
+        function updateFilters() {
+            loadAttendance({
+                class: classFilter.value,
+                date: dateFilter.value
+            });
+        }
+
+        // Logout Handler
+        logoutBtn.addEventListener("click", () => {
+            signOut(auth);
+        });
+    </script>
+</body>
+</html>
