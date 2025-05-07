@@ -57,7 +57,6 @@
 
     <!-- All-in-One Firebase Implementation -->
     <script type="module">
-        // Import Firebase services directly
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { 
             getAuth,
@@ -75,7 +74,6 @@
             Timestamp 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCJi5DJSVAZtpJ6SZD1mfPl3Cls5XxOZ94",
             authDomain: "ulsp-attendance.firebaseapp.com",
@@ -85,13 +83,11 @@
             appId: "1:927474627007:web:a89594690d37dc0d36b10a"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // DOM Elements
         const logoutBtn = document.getElementById("logoutBtn");
         const attendanceData = document.getElementById("attendanceData");
         const classFilter = document.getElementById("classFilter");
@@ -99,79 +95,81 @@
         const resetFilters = document.getElementById("resetFilters");
         const adminEmail = document.getElementById("adminEmail");
 
-        // Check Admin Status
-        async function checkAdminAccess(user) {
-            const adminRef = collection(db, "admins");
-            const snapshot = await getDocs(adminRef);
-            const isAdmin = snapshot.docs.some(doc => doc.id === user.uid);
-            
-            if(!isAdmin) {
-                alert("Access denied: You are not an admin");
-                window.location.href = "index.html";
-            }
-        }
-
-        // Load Attendance Data
         async function loadAttendance(filters = {}) {
-            let q = query(collection(db, "attendance"));
+            try {
+                let q = query(collection(db, "attendance"));
 
-            if(filters.class) {
-                q = query(q, where("className", "==", filters.class));
-            }
+                if(filters.class) {
+                    q = query(q, where("className", "==", filters.class));
+                }
 
-            if(filters.date) {
-                const startDate = new Date(filters.date);
-                const endDate = new Date(filters.date);
-                endDate.setDate(endDate.getDate() + 1);
+                if(filters.date) {
+                    const startDate = new Date(filters.date);
+                    const endDate = new Date(filters.date);
+                    endDate.setDate(endDate.getDate() + 1);
+                    
+                    q = query(q, 
+                        where("timestamp", ">=", Timestamp.fromDate(startDate)),
+                        where("timestamp", "<", Timestamp.fromDate(endDate))
+                    );
+                }
+
+                const snapshot = await getDocs(q);
+                console.log('Fetched documents:', snapshot.docs.length);
                 
-                q = query(q, 
-                    where("timestamp", ">=", Timestamp.fromDate(startDate)),
-                    where("timestamp", "<", Timestamp.fromDate(endDate))
-                );
-            }
+                attendanceData.innerHTML = "";
 
-            const snapshot = await getDocs(q);
-            attendanceData.innerHTML = "";
+                if(snapshot.empty) {
+                    attendanceData.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                No attendance records found
+                            </td>
+                        </tr>`;
+                    return;
+                }
 
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const row = `
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const row = `
+                        <tr>
+                            <td class="px-6 py-4">${data.userName || 'N/A'}</td>
+                            <td class="px-6 py-4">${data.userEmail || 'N/A'}</td>
+                            <td class="px-6 py-4">${data.className || 'N/A'}</td>
+                            <td class="px-6 py-4">${data.timestamp?.toDate().toLocaleString() || 'N/A'}</td>
+                            <td class="px-6 py-4">
+                                ${data.location ? `
+                                <a href="https://www.google.com/maps?q=${data.location.lat},${data.location.lng}" 
+                                   target="_blank" 
+                                   class="text-blue-600 hover:underline">
+                                    View Map
+                                </a>
+                                ` : 'N/A'}
+                            </td>
+                        </tr>
+                    `;
+                    attendanceData.innerHTML += row;
+                });
+            } catch (error) {
+                console.error('Data load error:', error);
+                attendanceData.innerHTML = `
                     <tr>
-                        <td class="px-6 py-4">${data.userName}</td>
-                        <td class="px-6 py-4">${data.userEmail}</td>
-                        <td class="px-6 py-4">${data.className}</td>
-                        <td class="px-6 py-4">${data.timestamp.toDate().toLocaleString()}</td>
-                        <td class="px-6 py-4">
-                            <a href="https://www.google.com/maps?q=${data.location.lat},${data.location.lng}" 
-                               target="_blank" 
-                               class="text-blue-600 hover:underline">
-                                View Map
-                            </a>
+                        <td colspan="5" class="text-center py-4 text-red-500">
+                            Error loading data: ${error.message}
                         </td>
-                    </tr>
-                `;
-                attendanceData.innerHTML += row;
-            });
+                    </tr>`;
+            }
         }
 
-        // Auth State Handler
         onAuthStateChanged(auth, async (user) => {
             if(user) {
-                if(user.email === "sannishazily@gmail.com") {
-                    adminEmail.textContent = user.email;
-                    await checkAdminAccess(user);
-                    await loadAttendance();
-                } else {
-                    alert("Access denied: Admin email mismatch");
-                    signOut(auth);
-                    window.location.href = "index.html";
-                }
+                adminEmail.textContent = user.email;
+                await loadAttendance();
             } else {
-                window.location.href = "index.html";
+                await signInWithPopup(auth, provider);
             }
         });
 
-        // Filter Handlers
         classFilter.addEventListener("change", () => updateFilters());
         dateFilter.addEventListener("change", () => updateFilters());
         resetFilters.addEventListener("click", () => {
@@ -187,7 +185,6 @@
             });
         }
 
-        // Logout Handler
         logoutBtn.addEventListener("click", () => {
             signOut(auth);
         });
