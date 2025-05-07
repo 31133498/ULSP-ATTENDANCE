@@ -4,16 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ULSP Smart Attendance</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="flex items-center justify-center min-h-screen bg-gray-50 p-4">
   <div class="bg-white shadow-lg rounded-lg w-full max-w-md p-8">
 
-    <!-- Header / Logo -->
     <h1 class="text-2xl font-bold text-center mb-6">ULSP Attendance</h1>
 
-    <!-- Login Button -->
     <div id="loginContainer" class="text-center mb-6">
       <button id="loginBtn" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
         <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" class="h-5 mr-2" />
@@ -21,7 +18,6 @@
       </button>
     </div>
 
-    <!-- Profile Preview (shown after login) -->
     <div id="profileSection" class="hidden mb-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-3">
@@ -32,7 +28,6 @@
       </div>
     </div>
 
-    <!-- Class Selection -->
     <div id="classSection" class="hidden">
       <label for="classSelect" class="block mb-2 font-medium text-gray-700">Select Your Class</label>
       <select id="classSelect" class="w-full mb-4 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -43,7 +38,6 @@
         <option>ULSP Year 4</option>
       </select>
 
-      <!-- Attendance Button -->
       <button id="takeAttendanceBtn" disabled class="w-full py-3 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed">
         Take Attendance
       </button>
@@ -52,12 +46,11 @@
   </div>
 
   <div class="absolute bottom-4 right-4">
-  <a href="admin.html" class="text-blue-600 hover:underline text-sm">
-    Admin Dashboard →
-  </a>
-</div>
+    <a href="admin.html" class="text-blue-600 hover:underline text-sm">
+      Admin Dashboard →
+    </a>
+  </div>
 
-  <!-- Inline Firebase + App Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import {
@@ -73,7 +66,6 @@
       addDoc
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
-    // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCJi5DJSVAZtpJ6SZD1mfPl3Cls5XxOZ94",
       authDomain: "ulsp-attendance.firebaseapp.com",
@@ -83,13 +75,11 @@
       appId: "1:927474627007:web:a89594690d37dc0d36b10a"
     };
     
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
     
-    // DOM Elements
     const loginContainer = document.getElementById("loginContainer");
     const loginBtn = document.getElementById("loginBtn");
     const logoutLink = document.getElementById("logoutLink");
@@ -100,7 +90,6 @@
     const classSelect = document.getElementById("classSelect");
     const takeBtn = document.getElementById("takeAttendanceBtn");
     
-    // Enable button when class is selected
     classSelect.addEventListener("change", () => {
       takeBtn.disabled = !classSelect.value;
       if (classSelect.value) {
@@ -110,7 +99,6 @@
       }
     });
     
-    // Auth Handlers
     loginBtn.addEventListener("click", () => {
       signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
     });
@@ -134,7 +122,6 @@
       }
     });
     
-    // Attendance Submission
     takeBtn.addEventListener("click", async () => {
       const cls = classSelect.value;
       if (!cls) return alert("Please select a class.");
@@ -147,13 +134,17 @@
           userName: user.displayName,
           userEmail: user.email,
           className: cls,
-          timestamp: new Date()
+          timestamp: new Date(),
+          location: {
+            lat: 6.518113559723398,
+            lng: 3.39807463767682
+          }
         });
     
         alert("✅ Attendance recorded!");
         takeBtn.disabled = true;
         takeBtn.textContent = "Submitted!";
-        classSelect.value = ""; // Reset selection
+        classSelect.value = "";
       } catch (error) {
         console.error("Error:", error);
         alert("❌ Failed to record attendance: " + error.message);
